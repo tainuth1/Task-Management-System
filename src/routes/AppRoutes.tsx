@@ -2,7 +2,8 @@ import { Route, Routes } from "react-router-dom";
 import Login from "../auth/Login";
 import Register from "../auth/Register";
 import ProtectedRoute from "./ProtectedRoute";
-import Home from "../pages/Home";
+import Dashboard from "../pages/Dashboard";
+import Main from "../layouts/Main";
 
 const AppRoutes = () => {
   return (
@@ -10,8 +11,14 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Home />} />
+        <Route
+          element={
+            <ProtectedRoute>
+              <Main />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/" element={<Dashboard />} />
         </Route>
       </Routes>
     </>

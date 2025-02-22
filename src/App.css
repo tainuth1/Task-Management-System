@@ -1,0 +1,35 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+* {
+  font-family: "Inter", serif;
+  font-optical-sizing: auto;
+}
+/* .sub-task-list::-webkit-scrollbar {
+  display: none;
+} */
+/* Scrollbar Track */
+.sub-task-list::-webkit-scrollbar {
+  width: 9px; /* Width of the scrollbar */
+}
+
+/* Scrollbar Handle */
+.sub-task-list::-webkit-scrollbar-thumb {
+  background: #888; /* Color of the scrollbar handle */
+  border-radius: 6px; /* Rounded corners */
+  border: 3px solid #f1f1f1; /* Padding around the handle */
+}
+
+/* Scrollbar Handle on hover */
+.sub-task-list::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Darker color on hover */
+}
+
+/* Scrollbar Track */
+.sub-task-list::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Color of the track */
+  border-radius: 6px; /* Rounded corners */
+}
+
+/* Scrollbar Corner */
+.sub-task-list::-webkit-scrollbar-corner {
+  background: #f1f1f1; /* Color of the corner */
+}
