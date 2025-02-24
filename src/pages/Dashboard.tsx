@@ -2,15 +2,36 @@ import { AnimatePresence, motion } from "framer-motion";
 import TasksContainer from "../components/TasksContainer";
 import { useState } from "react";
 import AddTaskForm from "../components/AddTaskForm";
+import Alert from "../components/Alert";
 
 const Dashboard = () => {
   const [menuModal, setMenuModal] = useState<boolean>(false);
   const [formModal, setFormModal] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string>("");
   const changeModalState = () => {
     setFormModal(!formModal);
   };
   return (
     <div className="w-full">
+      {submitError === "success" ? (
+        <Alert
+          type="success"
+          title="Task Created Successfully"
+          message="Your task has been created. You can now proceed to complete it."
+        />
+      ) : submitError === "error" ? (
+        <Alert
+          type="error"
+          title="Failed to Create Task"
+          message="Something went wrong while creating the task."
+        />
+      ) : submitError === "warning" ? (
+        <Alert
+          type="warning"
+          title="Something Went Wrong"
+          message="Failed to create a subtask."
+        />
+      ) : null}
       <AnimatePresence>
         {formModal && (
           <motion.div
@@ -25,7 +46,10 @@ const Dashboard = () => {
                 onClick={(e) => e.stopPropagation()}
                 className="w-[600px] h-[650px]"
               >
-                <AddTaskForm />
+                <AddTaskForm
+                  setFormModal={setFormModal}
+                  setSubmitError={setSubmitError}
+                />
               </div>
             </div>
           </motion.div>

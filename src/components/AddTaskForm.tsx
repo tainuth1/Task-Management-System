@@ -3,12 +3,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SubTasks, Task } from "../models/AuthModels";
 import { FormEvent, useState } from "react";
 import * as Yup from "yup";
+import { supabase } from "../supabaseClient";
 
 const initialValues: Task = {
   title: "",
   description: "",
   priority: "Low",
   category: "Personal",
+  status: "Todo",
   due_date: "",
 };
 const validationSchema = Yup.object({
@@ -19,27 +21,73 @@ const validationSchema = Yup.object({
   category: Yup.string().required("Required"),
   due_date: Yup.date().required("Required"),
 });
- 
+
 const priorities = [
   { label: "HIGH", value: "High", color: "bg-pink-500" },
   { label: "MEDIUM", value: "Medium", color: "bg-blue-500" },
   { label: "LOW", value: "Low", color: "bg-green-500" },
 ];
 
-const AddTaskForm = () => {
+type AddTaskFormType = {
+  setFormModal: (bool: boolean) => void;
+  setSubmitError: (value: string) => void;
+};
+
+const AddTaskForm = ({ setFormModal, setSubmitError }: AddTaskFormType) => {
   const [selectedPriority, setSelectedPriority] = useState<string>("");
   const [subTasks, setSubTasks] = useState<SubTasks[]>([]);
   const [subTaskInput, setSubTaskInput] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
   const handleSubmit = async (
     values: Task,
     { resetForm }: FormikHelpers<Task>
   ) => {
-    if (selectedPriority.trim() != "") {
-      console.log({ ...values, selectedPriority }, subTasks);
-      setSelectedPriority("");
+    setLoading(true);
+    if (selectedPriority.trim() == "") return;
+    // prepare task before submit
+    const newData = { ...values, priority: selectedPriority };
+    try {
+      // insert data into table
+      const { data, error } = await supabase
+        .from("tasks")
+        .insert([newData])
+        .select();
+      if (error) { // if an error stop the operation
+        setSubmitError("error");
+        console.error(error);
+        return;
+      }
+      // check if any subtasks. insert into table
+      if (subTasks.length > 0) {
+        const subTasksForInsert = subTasks.map((task) => ({ // prepare subtask data
+          task_id: data[0].id,
+          title: task.title,
+        }));
+        //insert into sub_task table
+        const { error: subTaskError } = await supabase
+          .from("sub_tasks")
+          .insert(subTasksForInsert)
+          .select();
+        if (subTaskError) {
+          console.log(error);
+          setSubmitError("warning");
+        } else {
+          setSubmitError("success");
+          setSubTasks([]);
+        }
+      }
+
       resetForm();
+      setFormModal(false);
+      setSelectedPriority("");
+    } catch (error) {
+      console.error("Unexpected error : ", error);
+      setSubmitError("error");
+    } finally {
+      setLoading(false);
     }
   };
+  
   const handleSubTaskForm = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (subTaskInput.trim() != "") {
@@ -214,9 +262,13 @@ const AddTaskForm = () => {
             </div>
             <button
               type="submit"
-              className="px-4 py-2 absolute bottom-4 right-4 bg-blue-500 text-white rounded-lg"
+              className="w-[140px] h-10 flex justify-center items-center px-4 py-2 absolute bottom-4 right-4 bg-blue-500 text-white rounded-lg"
             >
-              Submit
+              {loading ? (
+                <div className="w-8 h-8 animate-spin border-4 border-t-white border-r-white border-l-white border-b-blue-500 rounded-full"></div>
+              ) : (
+                "Add Task"
+              )}
             </button>
           </Form>
         )}
