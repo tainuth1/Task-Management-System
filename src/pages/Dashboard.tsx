@@ -1,16 +1,126 @@
 import { AnimatePresence, motion } from "framer-motion";
 import TasksContainer from "../components/TasksContainer";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AddTaskForm from "../components/AddTaskForm";
 import Alert from "../components/Alert";
+import { supabase } from "../supabaseClient";
+import { Task } from "../models/AuthModels";
+import { useAuth } from "../contexts/AuthProvider";
 
 const Dashboard = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [menuModal, setMenuModal] = useState<boolean>(false);
   const [formModal, setFormModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>("");
+  const { user } = useAuth();
   const changeModalState = () => {
     setFormModal(!formModal);
   };
+
+  const fetchTask = async () => {
+    let { data: tasks, error } = await supabase
+      .from("tasks")
+      .select(`*,sub_tasks (*)`);
+    if (error) {
+      console.error(error);
+    } else {
+      setTasks(tasks || []);
+    }
+  };
+  useEffect(() => {
+    fetchTask();
+    // Real-time listener for tasks
+    const taskChannel = supabase
+      .channel("personal_tasks")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tasks",
+          filter: `user_id=eq.${user?.id}`,
+        },
+        (payload) => {
+          console.log("Received Real-Time Event:", payload);
+          handleTaskUpdate(payload);
+        }
+      )
+      .subscribe();
+
+    // Real-time listener for sub_task
+    const subTaskChannel = supabase
+      .channel("personal_subtasks")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sub_tasks" },
+        (payload) => {
+          console.log("Subtask Updated:", payload); // log payload data
+          handleSubTaskUpdate(payload);
+        }
+      )
+      .subscribe();
+
+    // Cleanup listeners on unmount prevent from memory leak.
+    return () => {
+      supabase.removeChannel(taskChannel);
+      supabase.removeChannel(subTaskChannel);
+    };
+  }, []);
+
+  const handleTaskUpdate = (payload: any) => {
+    setTasks((prevTasks) => {
+      if (payload.eventType === "INSERT") {
+        return [...prevTasks, { ...payload.new, sub_tasks: [] }]; // Add new task
+      }
+      if (payload.eventType === "UPDATE") {
+        return prevTasks.map((task) =>
+          task.id === payload.new.id
+            ? { ...payload.new, sub_tasks: task.sub_tasks }
+            : task
+        ); // Update task
+      }
+      if (payload.eventType === "DELETE") {
+        console.log("Removing Task:", payload.old.id);
+        return prevTasks.filter((task) => task.id !== payload.old.id); // Remove task
+      }
+      return prevTasks;
+    });
+  };
+  const handleSubTaskUpdate = (payload: any) => {
+    setTasks((prevTasks) => {
+      return prevTasks.map((task) => {
+        if (task.id === payload.new.task_id) {
+          if (payload.eventType === "INSERT") {
+            return {
+              ...task,
+              sub_tasks: [...(task.sub_tasks || []), payload.new],
+            };
+          }
+          if (payload.eventType === "UPDATE") {
+            return {
+              ...task,
+              sub_tasks: task.sub_tasks?.map((sub) =>
+                sub.id === payload.new.id ? payload.new : sub
+              ),
+            };
+          }
+          if (payload.eventType === "DELETE") {
+            return {
+              ...task,
+              sub_tasks: task.sub_tasks?.filter(
+                (sub) => sub.id !== payload.old.id
+              ),
+            };
+          }
+        }
+        return task;
+      });
+    });
+  };
+
+  const filterTask = (status: string) =>
+    tasks.filter((task) => task.status === status);
+
   return (
     <div className="w-full">
       {submitError === "success" ? (
@@ -105,18 +215,34 @@ const Dashboard = () => {
       </div>
       <div className="grid grid-cols-12 gap-5 mt-5">
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
-          <TasksContainer title={"TODO"} lineColor="bg-[#212D36]">
+          <TasksContainer
+            title={"TODO"}
+            lineColor="bg-[#212D36]"
+            tasks={filterTask("Todo")}
+          >
             <AddTaskButton clickEvent={changeModalState} />
           </TasksContainer>
         </div>
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
-          <TasksContainer title={"IN WORK"} lineColor="bg-[#4A6BBB]" />
+          <TasksContainer
+            title={"IN WORK"}
+            lineColor="bg-[#4A6BBB]"
+            tasks={filterTask("In Work")}
+          />
         </div>
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
-          <TasksContainer title={"IN PROGRESS"} lineColor="bg-[#E5BF9E]" />
+          <TasksContainer
+            title={"IN PROGRESS"}
+            lineColor="bg-[#E5BF9E]"
+            tasks={filterTask("In Progress")}
+          />
         </div>
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
-          <TasksContainer title={"COMPLETED"} lineColor="bg-[#8AB476]" />
+          <TasksContainer
+            title={"COMPLETED"}
+            lineColor="bg-[#8AB476]"
+            tasks={filterTask("Done")}
+          />
         </div>
       </div>
     </div>

@@ -72,10 +72,10 @@ const AddTaskForm = ({ setFormModal, setSubmitError }: AddTaskFormType) => {
           console.log(error);
           setSubmitError("warning");
         } else {
-          setSubmitError("success");
           setSubTasks([]);
         }
       }
+      setSubmitError("success");
 
       resetForm();
       setFormModal(false);
