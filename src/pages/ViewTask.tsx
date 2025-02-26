@@ -1,13 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { SubTasks } from "../models/AuthModels";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { SubTasks, Task } from "../models/AuthModels";
+import { supabase } from "../supabaseClient";
+import completedIcon from "./../assets/icons/completed-icons.svg";
 
 const ViewTask = () => {
-  // const { id } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
+  const [task, setTask] = useState<Task | null>(null);
   const [subTasks, setSubTasks] = useState<SubTasks[]>([]);
   const [taskInput, setTaskInput] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
   const addNewSubTask = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (taskInput.trim() != "") {
@@ -21,13 +25,149 @@ const ViewTask = () => {
     }
   };
 
+  const completedSubTasks =
+    task?.sub_tasks?.filter((sTask) => sTask.status == true) ?? [];
+  const totalSubTasks = task?.sub_tasks?.length ?? 0;
+  const completedCount = completedSubTasks.length;
+
+  const fetchTask = async () => {
+    let { data: task, error } = await supabase
+      .from("tasks")
+      .select(`*, sub_tasks(*)`)
+      .eq("id", id)
+      .single();
+    if (error) {
+      console.error(error);
+    } else {
+      setTask(task || {});
+    }
+  };
+
+  useEffect(() => {
+    fetchTask();
+  }, []);
+
+  const markComplete = async (
+    taskId: string,
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    const newSubTasks = task?.sub_tasks?.map((sTask) =>
+      sTask.id === taskId ? { ...sTask, status: e.target.checked } : sTask
+    );
+    setTask((prevTask) =>
+      prevTask ? { ...prevTask, sub_tasks: newSubTasks } : prevTask
+    );
+
+    const { error } = await supabase
+      .from("sub_tasks")
+      .update({ status: e.target.checked })
+      .eq("id", taskId);
+
+    // Handle errors and revert the state if necessary
+    if (error) {
+      console.log(error);
+      // Revert the state if the update fails
+      const revertedSubTasks = task?.sub_tasks?.map((sTask) =>
+        sTask.id === taskId ? { ...sTask, status: !e.target.checked } : sTask
+      );
+
+      setTask((prevTask) =>
+        prevTask ? { ...prevTask, sub_tasks: revertedSubTasks } : prevTask
+      );
+    }
+  };
+
+  // const markComplete = async (e: ChangeEvent<HTMLInputElement>, id: string) => {
+  //   const { error } = await supabase
+  //     .from("sub_tasks")
+  //     .update({ status: e.target.checked })
+  //     .eq("id", id);
+
+  //   if (error) {
+  //     console.log(error);
+  //   }
+  // };
+
+  const deleteSubTask = async (id: string) => {
+    const newSubTasks = task?.sub_tasks?.filter((sTask) => sTask.id !== id);
+    setTask((prevTask) =>
+      prevTask ? { ...prevTask, sub_tasks: newSubTasks } : prevTask
+    );
+    const { error } = await supabase.from("sub_tasks").delete().eq("id", id);
+    if (error) console.log(error);
+  };
+
+  // useEffect(() => {
+  //   fetchTask();
+
+  //   const taskSubscription = supabase
+  //     .channel("realtime-task")
+  //     .on(
+  //       "postgres_changes",
+  //       {
+  //         event: "UPDATE",
+  //         schema: "public",
+  //         table: "tasks",
+  //         filter: `id=eq.${id}`,
+  //       },
+  //       (payload) => {
+  //         console.log("Task Updated:", payload);
+  //         fetchTask(); // Refetch the task if updated
+  //       }
+  //     )
+  //     .subscribe();
+
+  //   const subTaskSubscription = supabase
+  //     .channel("realtime-subtasks")
+  //     .on(
+  //       "postgres_changes",
+  //       {
+  //         event: "*",
+  //         schema: "public",
+  //         table: "sub_tasks",
+  //         filter: `task_id=eq.${id}`,
+  //       },
+  //       (payload) => {
+  //         console.log("Subtask Changed:", payload);
+  //         fetchTask(); // Refetch when subtasks change
+  //       }
+  //     )
+  //     .subscribe();
+
+  //   // Cleanup on unmount
+  //   return () => {
+  //     supabase.removeChannel(taskSubscription);
+  //     supabase.removeChannel(subTaskSubscription);
+  //   };
+  // }, [id]);
+
   const removeNewSubTasks = (id: string) => {
     const newSubTasksAfterRemove = subTasks.filter((item) => item.id != id);
     setSubTasks(newSubTasksAfterRemove);
   };
 
-  const confirmNewTasks = () => {
-    console.log(subTasks);
+  const confirmNewTasks = async () => {
+    setLoading(true);
+    const prepareSubTasks = subTasks.map((sTask) => ({
+      task_id: id,
+      title: sTask.title,
+    }));
+    try {
+      const { data, error } = await supabase
+        .from("sub_tasks")
+        .insert(prepareSubTasks)
+        .select();
+      if (error) throw error;
+      const newSubTasksAfterInsert = [...data, ...(task?.sub_tasks ?? [])];
+      setTask((prevTask) =>
+        prevTask ? { ...prevTask, sub_tasks: newSubTasksAfterInsert } : prevTask
+      );
+      setSubTasks([]);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,22 +196,24 @@ const ViewTask = () => {
         <div className="ml-5">
           <div className="flex items-center gap-4">
             <h4 className="text-2xl font-semibold text-regular mt-1">
-              High priority mobile app design health
+              {task?.title}
             </h4>
             <div className="flex space-x-2 mt-2">
               <label
                 className={`flex items-center px-4 py-1 border rounded-full cursor-pointer transition-all hover:bg-gray-100`}
               >
-                <input type="checkbox" className="hidden" />
                 <span
                   className={`w-3 h-3 rounded-full mr-2 bg-pink-500`}
                 ></span>
-                <span className="text-[13px] text-gray-700">HIGH</span>
+                <span className="text-[13px] text-gray-700">
+                  {task?.priority}
+                </span>
               </label>
             </div>
           </div>
           <p className="text-second text-[15px] mt-2">
-            <span className=" text-gray-600">Due Date: </span>Today at 11:59 PM
+            <span className=" text-gray-600">Due Date: </span>
+            {task?.due_date}
           </p>
         </div>
       </div>
@@ -80,19 +222,30 @@ const ViewTask = () => {
           <div className="">
             <p className="text-second text-[16px]">Task Description:</p>
             <h4 className="text-regular text-[19px] font-medium">
-              High priority work will be done health.
+              {task?.description}
             </h4>
           </div>
           <div className="flex gap-x-20 flex-wrap justify-start">
             <div className="mt-5">
               <p className="text-second text-[15px] mt-3">Due Date</p>
               <h5 className="text-regular text-[16px] font-medium">
-                Today at 11:59 PM
+                {task?.due_date}
               </h5>
             </div>
             <div className="mt-5">
               <p className="text-second text-[15px] mt-3">Progress</p>
-              <h5 className="text-regular text-[16px] font-medium">6/10</h5>
+              <div className="flex gap-2 items-center">
+                <h5 className="text-regular text-[16px] font-medium">
+                  {completedCount}/{totalSubTasks}
+                </h5>
+                {completedCount === totalSubTasks && (
+                  <img
+                    className="w-6"
+                    src={completedIcon}
+                    alt="completed Icon"
+                  />
+                )}
+              </div>
             </div>
             <div className="mt-5">
               <p className="text-second text-[15px] mt-3">Task Owner</p>
@@ -109,9 +262,9 @@ const ViewTask = () => {
           <div className="mt-8">
             <p className="text-second text-[16px]">All Tasks:</p>
             <div className="h-[365px] mt-2 flex flex-col gap-2 sub-task-list overflow-y-auto">
-              {[1, 2, 3, 4, 5, 6, 7].map((task) => (
+              {task?.sub_tasks?.map((sTask) => (
                 <div
-                  key={task}
+                  key={sTask.id}
                   className="flex justify-between items-center border bg-gray-100 pl-4 pr-1 py-1 rounded-md transition-all hover:bg-gray-50"
                 >
                   <div className="flex items-center gap-5">
@@ -119,16 +272,22 @@ const ViewTask = () => {
                       <input
                         type="checkbox"
                         id="myCheckbox"
-                        onChange={() => {}}
-                        checked={task % 2 != 0}
+                        checked={sTask.status}
+                        // onChange={(e) => {
+                        //   markComplete(e, `${sTask.id}`);
+                        // }}
+                        onChange={(e) => {
+                          markComplete(`${sTask.id}`, e);
+                        }}
                         className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       />
                     </div>
-                    <p className="text-regular">
-                      High priority work will be done health.
-                    </p>
+                    <p className="text-regular">{sTask.title}</p>
                   </div>
-                  <button className="p-3 rounded-md">
+                  <button
+                    onClick={() => deleteSubTask(`${sTask.id}`)}
+                    className="p-3 rounded-md"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -207,9 +366,13 @@ const ViewTask = () => {
             {subTasks.length > 0 && (
               <button
                 onClick={confirmNewTasks}
-                className="px-4 py-2 transition-all bg-blue-500 text-white rounded-lg"
+                className="w-[140px] h-10 flex justify-center items-center px-4 py-2 bg-blue-500 text-white rounded-lg"
               >
-                Confirm
+                {loading ? (
+                  <div className="w-8 h-8 animate-spin border-4 border-t-white border-r-white border-l-white border-b-blue-500 rounded-full"></div>
+                ) : (
+                  "Confirm"
+                )}
               </button>
             )}
           </div>

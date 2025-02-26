@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Task } from "../models/AuthModels";
 import { supabase } from "../supabaseClient";
+import completedIcon from "./../assets/icons/completed-icons.svg";
 
 interface TaskCardProps {
   task: Task;
@@ -192,7 +193,7 @@ const TaskCard = ({ task, setDeleteError }: TaskCardProps) => {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </div>  
         </div>
         <Link to={`/task/${task.id}`} className="text-regular font-semibold">
           {task.title}
@@ -201,8 +202,11 @@ const TaskCard = ({ task, setDeleteError }: TaskCardProps) => {
         {/* progress */}
         <div className="mt-4">
           <div className="flex justify-between items-center">
-            <span className="text-regular text-[14px] font-medium">
-              Progress
+            <span className="text-regular text-[14px] font-medium flex gap-2 items-center">
+              <span>Progress</span>
+              {completedCount === totalSubTasks && (
+                <img className="w-6" src={completedIcon} alt="" />
+              )}
             </span>
             <span className="text-regular text-[13px]">
               {completedCount}/{totalSubTasks}
