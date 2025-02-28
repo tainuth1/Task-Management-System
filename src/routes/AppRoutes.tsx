@@ -5,6 +5,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import Dashboard from "../pages/Dashboard";
 import Main from "../layouts/Main";
 import ViewTask from "../pages/ViewTask";
+import UpdateTask from "../components/UpdateTask";
 
 const AppRoutes = () => {
   return (
@@ -21,6 +22,7 @@ const AppRoutes = () => {
         >
           <Route path="/" element={<Dashboard />}></Route>
           <Route path="/task/:id" element={<ViewTask />} />
+          <Route path="/edit/:id" element={<UpdateTask />} />
         </Route>
       </Routes>
     </>

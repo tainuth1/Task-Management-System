@@ -158,7 +158,10 @@ const TaskCard = ({ task, setDeleteError }: TaskCardProps) => {
             <AnimatePresence>
               {taskModal && (
                 <motion.div className="absolute w-40 bg-gray-100 right-0 rounded-lg border shadow-lg">
-                  <button className="w-full flex px-3 py-2 text-[12px] items-center gap-2 text-sm rounded-md text-regular hover:bg-gray-200">
+                  <Link
+                    to={`/edit/${task.id}`}
+                    className="w-full flex px-3 py-2 text-[12px] items-center gap-2 text-sm rounded-md text-regular hover:bg-gray-200"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -173,7 +176,7 @@ const TaskCard = ({ task, setDeleteError }: TaskCardProps) => {
                       />
                     </svg>
                     Edit
-                  </button>
+                  </Link>
                   <button
                     onClick={() => setConfirmDelete(!confirmDelete)}
                     className="w-full flex px-3 py-2 text-[12px] items-center gap-2 text-sm rounded-md text-regular hover:bg-gray-200"
@@ -193,7 +196,7 @@ const TaskCard = ({ task, setDeleteError }: TaskCardProps) => {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>  
+          </div>
         </div>
         <Link to={`/task/${task.id}`} className="text-regular font-semibold">
           {task.title}
