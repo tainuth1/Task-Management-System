@@ -138,11 +138,14 @@ const TaskCard = ({ task, setDeleteError }: TaskCardProps) => {
         )}
       </AnimatePresence>
       <div
-        className={`w-full p-3 rounded-lg border transition-all ${
-          loading ? "bg-slate-50" : "bg-white"
-        }`}
+        className={`w-full relative p-3 rounded-lg border transition-all bg-white`}
         style={{ boxShadow: "rgba(99, 99, 99, 0.2) 0px 2px 8px 0px" }}
       >
+        {loading && (
+          <div className="absolute w-full h-full flex justify-center items-center bg-[#0000002a] rounded-lg left-0 top-0 z-50">
+            <div className="w-8 h-8 border-4 border-t-white rounded-full animate-spin"></div>
+          </div>
+        )}
         <div className="flex justify-between items-center mb-3">
           <span
             className={`px-3 py-1 text-sm ${

@@ -2,12 +2,14 @@ import { ReactNode, useState } from "react";
 import { Task } from "../models/AuthModels";
 import TaskCard from "./TaskCard";
 import Alert from "./Alert";
+import TaskCardLoadingSkeloton from "./skeloton/TaskCardLoadingSkeloton";
 
 type TasksContainerProps = {
   title: string;
   lineColor: string;
   tasks: Task[];
   children?: ReactNode;
+  isLoading: boolean;
 };
 
 const TasksContainer = ({
@@ -15,6 +17,7 @@ const TasksContainer = ({
   lineColor,
   tasks,
   children,
+  isLoading = false,
 }: TasksContainerProps) => {
   const [deleteError, setDeleteError] = useState<string>("");
   return (
@@ -51,15 +54,22 @@ const TasksContainer = ({
       </div>
       {/* Tasks Container */}
       <div className="w-full flex flex-col gap-3 max-h-[566px] sub-task-list overflow-y-auto mt-3">
-        {tasks.length > 0
-          ? tasks.map((task) => (
-              <TaskCard
-                setDeleteError={setDeleteError}
-                key={task.id}
-                task={task}
-              />
-            ))
-          : null}
+        {isLoading ? (
+          // Show skeleton placeholders while loading
+          Array.from({ length: 1 }).map((_, index) => (
+            <TaskCardLoadingSkeloton key={index} />
+          ))
+        ) : tasks.length > 0 ? (  
+          tasks.map((task) => (
+            <TaskCard
+              setDeleteError={setDeleteError}
+              key={task.id}
+              task={task}
+            />
+          ))
+        ) : (
+          null
+        )}
         {children}
       </div>
     </div>

@@ -9,6 +9,7 @@ import { useAuth } from "../contexts/AuthProvider";
 
 const Dashboard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [menuModal, setMenuModal] = useState<boolean>(false);
   const [formModal, setFormModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>("");
@@ -18,6 +19,7 @@ const Dashboard = () => {
   };
 
   const fetchTask = async () => {
+    setIsLoading(true);
     let { data: tasks, error } = await supabase
       .from("tasks")
       .select(`*,sub_tasks (*)`);
@@ -26,6 +28,7 @@ const Dashboard = () => {
     } else {
       setTasks(tasks || []);
     }
+    setIsLoading(false);
   };
   useEffect(() => {
     fetchTask();
@@ -219,6 +222,7 @@ const Dashboard = () => {
             title={"TODO"}
             lineColor="bg-[#212D36]"
             tasks={filterTask("Todo")}
+            isLoading={isLoading}
           >
             <AddTaskButton clickEvent={changeModalState} />
           </TasksContainer>
@@ -228,6 +232,7 @@ const Dashboard = () => {
             title={"IN WORK"}
             lineColor="bg-[#4A6BBB]"
             tasks={filterTask("In Work")}
+            isLoading={isLoading}
           />
         </div>
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
@@ -235,6 +240,7 @@ const Dashboard = () => {
             title={"IN PROGRESS"}
             lineColor="bg-[#E5BF9E]"
             tasks={filterTask("In Progress")}
+            isLoading={isLoading}
           />
         </div>
         <div className="lg:col-span-3 md:col-span-4 sm:col-span-6 col-span-12 ">
@@ -242,6 +248,7 @@ const Dashboard = () => {
             title={"COMPLETED"}
             lineColor="bg-[#8AB476]"
             tasks={filterTask("Done")}
+            isLoading={isLoading}
           />
         </div>
       </div>

@@ -147,11 +147,11 @@ const UpdateTask = () => {
     );
     if (!getSubTaskTitle) return;
     setSubTaskChanged(getSubTaskTitle.title);
-    setTimeout(()=>{
+    setTimeout(() => {
       if (updateRef.current) {
         updateRef.current.focus();
       }
-    }, 0.01)
+    }, 0.01);
   };
 
   const handleSubmitSingleSubTask = async (
@@ -450,7 +450,9 @@ const UpdateTask = () => {
                           />
                         </form>
                       ) : (
-                        <p className="text-regular">{task.title}</p>
+                        <p className="lg:w-56 md:w-[500px] sm:w-[400px] w-48 text-regular truncate">
+                          {task.title}
+                        </p>
                       )}
                     </div>
                     <div className="">
