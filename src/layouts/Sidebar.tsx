@@ -1,9 +1,29 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthProvider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 
 const Sidebar = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [userData, setUserData] = useState<any>(null);
+
+  const getUserData = async () => {
+    const { data, error } = await supabase
+      .from("users_detail")
+      .select("*")
+      .eq("id", user?.id)
+      .single();
+    if (error) return;
+
+    setUserData(data);
+  };
+
+  useEffect(() => {
+    getUserData();
+  }, []);
+
+  if (!userData) return <></>;
 
   return (
     <>
@@ -37,15 +57,19 @@ const Sidebar = () => {
         }`}
       >
         <div className="flex items-center space-x-4 p-2 mb-5">
-          <img
-            className="h-12 rounded-full"
-            src="https://scontent.fpnh18-6.fna.fbcdn.net/v/t39.30808-1/474092135_1174259764032025_2743479778355334730_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=109&ccb=1-7&_nc_sid=e99d92&_nc_eui2=AeEPxBPaza0ZNnbqIVyALau13fwCF5l-ejPd_AIXmX56MzA5YBKd9TdXdi84KwNhLFj3PtRMDJU-IehLyrPxX8PV&_nc_ohc=RVofpns7vIkQ7kNvgGe7BYg&_nc_oc=AdiXYUvzhRfrlLZDmN0fIwpsoMnIcb9ZwbG6CYeoahpXcUpkI6YCowVd9M2zwswC9Mo&_nc_zt=24&_nc_ht=scontent.fpnh18-6.fna&_nc_gid=AVGe6kkiGkZ71ah2iOvI8Qz&oh=00_AYDRmtZshBM5waH0gOQE9IiDgks1ChIb2GkXD0X7dxzpOg&oe=67BE4205"
-            alt="Tai Nuth"
-          />
+          <Link to={`/profile/${user?.id}`}>
+            <img
+              className="h-12 rounded-full"
+              src={userData.profile_image}
+              alt="Tai Nuth"
+            />
+          </Link>
           <div>
-            <h4 className="font-semibold text-lg text-regular capitalize font-poppins tracking-wide">
-              Tai Nuth
-            </h4>
+            <Link to={`/profile/${user?.id}`}>
+              <h4 className="font-semibold text-lg text-regular font-poppins tracking-wide">
+                {userData.username}
+              </h4>
+            </Link>
             <span className="text-sm tracking-wide flex items-center space-x-1">
               <svg
                 className="h-4 text-green-500"

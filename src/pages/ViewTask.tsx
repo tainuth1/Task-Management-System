@@ -4,10 +4,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { SubTasks, Task } from "../models/AuthModels";
 import { supabase } from "../supabaseClient";
 import completedIcon from "./../assets/icons/completed-icons.svg";
+import { useAuth } from "../contexts/AuthProvider";
 
 const ViewTask = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [userData, setUserData] = useState<any | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [subTasks, setSubTasks] = useState<SubTasks[]>([]);
   const [taskInput, setTaskInput] = useState<string>("");
@@ -43,9 +46,26 @@ const ViewTask = () => {
     }
   };
 
+  const fetchOwnerTask = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from("users_detail")
+        .select("*")
+        .eq("id", user?.id)
+        .single();
+
+      if (error) throw error;
+      setUserData(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     fetchTask();
-  }, []);
+    fetchOwnerTask();
+  }, [id]);
 
   const markComplete = async (
     taskId: string,
@@ -77,17 +97,6 @@ const ViewTask = () => {
     }
   };
 
-  // const markComplete = async (e: ChangeEvent<HTMLInputElement>, id: string) => {
-  //   const { error } = await supabase
-  //     .from("sub_tasks")
-  //     .update({ status: e.target.checked })
-  //     .eq("id", id);
-
-  //   if (error) {
-  //     console.log(error);
-  //   }
-  // };
-
   const deleteSubTask = async (id: string) => {
     const newSubTasks = task?.sub_tasks?.filter((sTask) => sTask.id !== id);
     setTask((prevTask) =>
@@ -96,50 +105,6 @@ const ViewTask = () => {
     const { error } = await supabase.from("sub_tasks").delete().eq("id", id);
     if (error) console.log(error);
   };
-
-  // useEffect(() => {
-  //   fetchTask();
-
-  //   const taskSubscription = supabase
-  //     .channel("realtime-task")
-  //     .on(
-  //       "postgres_changes",
-  //       {
-  //         event: "UPDATE",
-  //         schema: "public",
-  //         table: "tasks",
-  //         filter: `id=eq.${id}`,
-  //       },
-  //       (payload) => {
-  //         console.log("Task Updated:", payload);
-  //         fetchTask(); // Refetch the task if updated
-  //       }
-  //     )
-  //     .subscribe();
-
-  //   const subTaskSubscription = supabase
-  //     .channel("realtime-subtasks")
-  //     .on(
-  //       "postgres_changes",
-  //       {
-  //         event: "*",
-  //         schema: "public",
-  //         table: "sub_tasks",
-  //         filter: `task_id=eq.${id}`,
-  //       },
-  //       (payload) => {
-  //         console.log("Subtask Changed:", payload);
-  //         fetchTask(); // Refetch when subtasks change
-  //       }
-  //     )
-  //     .subscribe();
-
-  //   // Cleanup on unmount
-  //   return () => {
-  //     supabase.removeChannel(taskSubscription);
-  //     supabase.removeChannel(subTaskSubscription);
-  //   };
-  // }, [id]);
 
   const removeNewSubTasks = (id: string) => {
     const newSubTasksAfterRemove = subTasks.filter((item) => item.id != id);
@@ -252,10 +217,13 @@ const ViewTask = () => {
               <h5 className="text-regular text-[16px] font-medium flex items-center gap-1">
                 <img
                   className="w-7 h-7 rounded-full"
-                  src="https://scontent.fpnh18-6.fna.fbcdn.net/v/t39.30808-1/474092135_1174259764032025_2743479778355334730_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=109&ccb=1-7&_nc_sid=e99d92&_nc_eui2=AeEPxBPaza0ZNnbqIVyALau13fwCF5l-ejPd_AIXmX56MzA5YBKd9TdXdi84KwNhLFj3PtRMDJU-IehLyrPxX8PV&_nc_ohc=RVofpns7vIkQ7kNvgGe7BYg&_nc_oc=AdiXYUvzhRfrlLZDmN0fIwpsoMnIcb9ZwbG6CYeoahpXcUpkI6YCowVd9M2zwswC9Mo&_nc_zt=24&_nc_ht=scontent.fpnh18-6.fna&_nc_gid=AVGe6kkiGkZ71ah2iOvI8Qz&oh=00_AYDRmtZshBM5waH0gOQE9IiDgks1ChIb2GkXD0X7dxzpOg&oe=67BE4205"
-                  alt=""
+                  src={
+                    userData?.profile_image ||
+                    "https://th.bing.com/th/id/OIP._V3ptgCmU7W4b1JrxLbd2wHaHW?rs=1&pid=ImgDetMain"
+                  }
+                  alt="User Profile"
                 />
-                Tai Nuth
+                {userData?.username || "User"}
               </h5>
             </div>
           </div>
@@ -273,9 +241,6 @@ const ViewTask = () => {
                         type="checkbox"
                         id="myCheckbox"
                         checked={sTask.status}
-                        // onChange={(e) => {
-                        //   markComplete(e, `${sTask.id}`);
-                        // }}
                         onChange={(e) => {
                           markComplete(`${sTask.id}`, e);
                         }}
